@@ -25,56 +25,75 @@ def sign_api():
 
     with lock:
         try:
-            # 1. 构造若离需要的 config.yml 格式
-            user_config = {
-                # --- 🌟 以下是补充的全局通用配置，写死在代码里解决 KeyError 报错 ---
-                'apple': "https://apple.ruoli.cc/captcha/validate",
-                'locationOffsetRange': 50, # 签到坐标随机偏移范围(单位：米)
-                'maxTry': 3,               # 最大尝试次数
-                'logDir': "_log/",         # 日志保存地址
-                'delay': [5, 10],          # 多用户延迟
-                'captcha': {},             # 留空，不配置验证码推送
-                'sendMessage': {},         # 留空，不配置消息推送
-                
-                # --- 以下是前端传入的动态数据 ---
-                'users': [
-                    {
-                        'type': 2,         # 2 为查寝，1 为签到 (按需调整)
-                        'schoolName': school,
-                        'username': username,
-                        'password': password,
-                        'signLevel': 1,
-                        'title': 0,
-                        'checkTitle': 0,
-                        'abnormalReason': "", # 补充缺失字段
-                        'lon': float(lon),  # 直接写入用户精准经度
-                        'lat': float(lat),  # 直接写入用户精准纬度
-                        'address': school,
-                        'photo': photo_url
-                    }
-                ]
-            }
+            # ==========================================
+            # 第一步：先读取现有的 config.yml 获取旧配置
+            # ==========================================
+            if os.path.exists("config.yml"):
+                with open("config.yml", "r", encoding="utf-8") as f:
+                    existing_config = yaml.safe_load(f) or {}
+            else:
+                existing_config = {} # 如果文件不存在，就给个空字典
+            
+            # ==========================================
+            # 第二步：将前端传来的新用户数据，覆盖到现有的配置中
+            # ==========================================
+            # 这里我们只修改 'users' 这个列表，其他全局配置（如推送、打码等）原封不动
+            existing_config['users'] = [
+                {
+                    'type': 2,         # 或者用你接收到的前端参数
+                    'schoolName': school,
+                    'username': username,
+                    'password': password,
+                    'signLevel': 1,
+                    'title': 0,
+                    'checkTitle': 0,
+                    'abnormalReason': "", 
+                    'lon': float(lon),  
+                    'lat': float(lat),  
+                    'address': school,
+                    'photo': photo_url
+                }
+            ]
+
+            # ==========================================
+            # 第三步：将混合后的完整配置，重新写回文件
+            # ==========================================
+            with open("config.yml", "w", encoding="utf-8") as f:
+                yaml.dump(existing_config, f, allow_unicode=True, sort_keys=False)
+            # # 1. 构造若离需要的 config.yml 格式
             # user_config = {
+            #     # --- 🌟 以下是补充的全局通用配置，写死在代码里解决 KeyError 报错 ---
+            #     'apple': "https://apple.ruoli.cc/captcha/validate",
+            #     'locationOffsetRange': 50, # 签到坐标随机偏移范围(单位：米)
+            #     'maxTry': 3,               # 最大尝试次数
+            #     'logDir': "_log/",         # 日志保存地址
+            #     'delay': [5, 10],          # 多用户延迟
+            #     'captcha': {},             # 留空，不配置验证码推送
+            #     'sendMessage': {},         # 留空，不配置消息推送
+                
+            #     # --- 以下是前端传入的动态数据 ---
             #     'users': [
             #         {
-            #             'type': 2,
+            #             'type': 2,         # 2 为查寝，1 为签到 (按需调整)
             #             'schoolName': school,
             #             'username': username,
             #             'password': password,
             #             'signLevel': 1,
             #             'title': 0,
             #             'checkTitle': 0,
-            #             'lon': float(lon),  # 🌟 直接写入用户从百度拾取的精准经度
-            #             'lat': float(lat),  # 🌟 直接写入用户从百度拾取的精准纬度
+            #             'abnormalReason': "", # 补充缺失字段
+            #             'lon': float(lon),  # 直接写入用户精准经度
+            #             'lat': float(lat),  # 直接写入用户精准纬度
             #             'address': school,
             #             'photo': photo_url
             #         }
             #     ]
             # }
             
-            # 2. 写入配置文件
-            with open("config.yml", "w", encoding="utf-8") as f:
-                yaml.dump(user_config, f, allow_unicode=True, sort_keys=False)
+            
+            # # 2. 写入配置文件
+            # with open("config.yml", "w", encoding="utf-8") as f:
+            #     yaml.dump(user_config, f, allow_unicode=True, sort_keys=False)
             
             # 3. 执行打卡脚本
             result = subprocess.run(["python", "index.py"], capture_output=True, text=True, cwd=".")
