@@ -1,0 +1,29 @@
+name: DD怪科技自动化运行
+
+# 触发条件：允许手动运行，或者设定每天定时运行
+on:
+  workflow_dispatch: # 核心：保留这个选项，它允许你在页面上手动点击按钮测试
+  # schedule:
+  #   - cron: '30 22 * * *' # 取消注释这两行可以开启定时任务（默认每天北京时间早上 6:30 运行）
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest # 使用免费的轻量级 Linux 云服务器
+
+    steps:
+    - name: 1. 获取最新代码
+      uses: actions/checkout@v3
+
+    - name: 2. 设置 Python 环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' # 设置 Python 版本
+
+    - name: 3. 安装所需依赖
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # 如果脚本没有 requirements.txt 但需要特定库，比如 requests，改为：pip install requests
+
+    - name: 4. 运行核心脚本
+      run: |
+        python index.py  # ⚠️ 注意：这里的 main.py 必须换成你仓库里的实际执行文件名
