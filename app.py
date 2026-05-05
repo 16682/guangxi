@@ -26,7 +26,6 @@ def sign_api():
     with lock:
         try:
             # 1. 构造若离需要的 config.yml 格式
-            # 1. 构造若离需要的 config.yml 格式 (静态全局配置 + 动态用户数据)
             user_config = {
                 # --- 🌟 以下是补充的全局通用配置，写死在代码里解决 KeyError 报错 ---
                 'apple': "https://apple.ruoli.cc/captcha/validate",
@@ -36,23 +35,42 @@ def sign_api():
                 'delay': [5, 10],          # 多用户延迟
                 'captcha': {},             # 留空，不配置验证码推送
                 'sendMessage': {},         # 留空，不配置消息推送
-            user_config = {
+                
+                # --- 以下是前端传入的动态数据 ---
                 'users': [
                     {
-                        'type': 2,
+                        'type': 2,         # 2 为查寝，1 为签到 (按需调整)
                         'schoolName': school,
                         'username': username,
                         'password': password,
                         'signLevel': 1,
                         'title': 0,
                         'checkTitle': 0,
-                        'lon': float(lon),  # 🌟 直接写入用户从百度拾取的精准经度
-                        'lat': float(lat),  # 🌟 直接写入用户从百度拾取的精准纬度
+                        'abnormalReason': "", # 补充缺失字段
+                        'lon': float(lon),  # 直接写入用户精准经度
+                        'lat': float(lat),  # 直接写入用户精准纬度
                         'address': school,
                         'photo': photo_url
                     }
                 ]
             }
+            # user_config = {
+            #     'users': [
+            #         {
+            #             'type': 2,
+            #             'schoolName': school,
+            #             'username': username,
+            #             'password': password,
+            #             'signLevel': 1,
+            #             'title': 0,
+            #             'checkTitle': 0,
+            #             'lon': float(lon),  # 🌟 直接写入用户从百度拾取的精准经度
+            #             'lat': float(lat),  # 🌟 直接写入用户从百度拾取的精准纬度
+            #             'address': school,
+            #             'photo': photo_url
+            #         }
+            #     ]
+            # }
             
             # 2. 写入配置文件
             with open("config.yml", "w", encoding="utf-8") as f:
