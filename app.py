@@ -26,10 +26,20 @@ def sign_api():
     with lock:
         try:
             # 1. 构造若离需要的 config.yml 格式
+            # 1. 构造若离需要的 config.yml 格式 (静态全局配置 + 动态用户数据)
+            user_config = {
+                # --- 🌟 以下是补充的全局通用配置，写死在代码里解决 KeyError 报错 ---
+                'apple': "https://apple.ruoli.cc/captcha/validate",
+                'locationOffsetRange': 50, # 签到坐标随机偏移范围(单位：米)
+                'maxTry': 3,               # 最大尝试次数
+                'logDir': "_log/",         # 日志保存地址
+                'delay': [5, 10],          # 多用户延迟
+                'captcha': {},             # 留空，不配置验证码推送
+                'sendMessage': {},         # 留空，不配置消息推送
             user_config = {
                 'users': [
                     {
-                        'type': 1,
+                        'type': 2,
                         'schoolName': school,
                         'username': username,
                         'password': password,
