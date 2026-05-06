@@ -108,6 +108,10 @@ users: #!!!!!别误删了这一行!!!!!
     schoolName: 武汉交通职业学院 # 学校全称
     username: "21934012" # 学号或者工号
     password: "gzj20120408." # 密码
+    proxy:
+      type: panda
+      api: http://pandavip.xiongmaodaili.com/xiongmao-web/apiPlus/vgl?secret=d721827b71ac55441d030d759bee565a&orderNo=VGL20220917133314ohkHufv4&count=10&isTxt=0&proxyType=1&validTime=0&removal=0&cityIds=
+      maxRetry: 3
     # 一般需填项-------
     signLevel: 1 # 签到等级[0:正常签到|1:请假后依然签到|2:请假或已经打卡后依然重复签到]
     title: 0 # [str:签到任务的标题|0:取最后一个未签到的任务]
