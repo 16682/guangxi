@@ -15,6 +15,8 @@ def sign_api():
     username = data.get('username')
     password = data.get('password')
     school = data.get('school')
+    # 新增接收一个具体的地址参数，如果没有传，就降级使用 school 名称
+    address = data.get('address', school)
     photo_url = data.get('photo', '')
     
     # # 🌟 直接接收前端传来的经纬度 (不再自己去查地图)
@@ -25,13 +27,13 @@ def sign_api():
     #     return jsonify({'code': 400, 'msg': '参数不全，请确保经纬度已填写'})
     
     # 校验：基础参数是否齐全
-    if not all([username, password, school]):
-        return jsonify({'code': 400, 'msg': '参数不全，请确保账号、密码、学校名称已填写'})
+    if not all([username, password, school, address]):
+        return jsonify({'code': 400, 'msg': '参数不全，请确保账号、密码、学校名称,地址已填写'})
 
     # 🌟 核心修改：通过后端自动获取经纬度，完全抛弃/覆盖前端传来的 lon 和 lat
     try:
         # 传入学校名称获取坐标 (返回的是元组: (lon, lat))
-        lon, lat = CpdailyTools.baiduGeocoding(school)
+        lon, lat = CpdailyTools.baiduGeocoding(address)
     except Exception as e:
         # 如果学校名字填得太离谱，或者 API 抽风，拦截错误并返回给前端
         return jsonify({'code': 500, 'msg': f'获取学校经纬度失败，请检查学校名称是否正确。错误信息：{str(e)}'})
@@ -65,7 +67,7 @@ def sign_api():
                     'abnormalReason': "", 
                     'lon': float(lon),  
                     'lat': float(lat),  
-                    'address': school,
+                    'address': address,
                     'photo': photo_url
                 },
                 # 任务二：查寝签到 (type: 2)
@@ -80,7 +82,7 @@ def sign_api():
                     'abnormalReason': "", 
                     'lon': float(lon),  
                     'lat': float(lat),  
-                    'address': school,
+                    'address': address,
                     'photo': photo_url
                 }
                     
