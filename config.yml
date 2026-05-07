@@ -81,7 +81,7 @@ users: #!!!!!别误删了这一行!!!!!
     password: "7777777Cjq!" # 密码
     proxy:
       type: panda
-      api: http://pandavip.xiongmaodaili.com/xiongmao-web/apiPlus/vgl?secret=d721827b71ac55441d030d759bee565a&orderNo=VGL20220917133314ohkHufv4&count=10&isTxt=0&proxyType=1&validTime=0&removal=0&cityIds=
+      api: http://route.xiongmaodaili.com/xiongmao-web/apiPlus/vgl?secret=d721827b71ac55441d030d759bee565a&orderNo=VGL20260507133117ocOdt1FX&count=10&isTxt=1&proxyType=1&validTime=0&removal=0&cityIds=400000&returnAccount=1
       maxRetry: 3
     # 一般需填项-------
     abnormalReason: "" # 范围外签到原因
