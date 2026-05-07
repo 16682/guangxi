@@ -104,9 +104,17 @@ class ExecuteEvent:
                 raise Exception("打码超时，AI 未能在 30 秒内返回结果")
 
             # ---------------------------------------------------------
-            # 4. 组装今日校园需要的返回值 (极简模式)
+            # 4. 组装今日校园需要的返回值 (基于置信度的强权模式)
             # ---------------------------------------------------------
-            objects = solution.get('objects', [])
+            
+            # 我们直接拿 AI 的底层概率数据自己做主！
+            confidences = solution.get('confidences', [])
+            if confidences:
+                # 只要概率大于 50% (0.5)，我们就强制选中它！
+                objects = [i for i, conf in enumerate(confidences) if conf > 0.5]
+            else:
+                # 兼容模式：万一没有概率数据，再用它默认的
+                objects = solution.get('objects', [])
             
             selected_codes = []
             for index in objects:
@@ -114,13 +122,32 @@ class ExecuteEvent:
                 if idx < len(image_infos):
                     selected_codes.append(image_infos[idx]['code'])
             
-            # ⚠️ 这里是最终的秘密武器：什么包装都不要加！直接返回包含 32 位码的纯数组！
+            print(f"YesCaptcha原始返回对象: {solution.get('objects')}")
+            print(f"经过强权修正后的正确索引: {objects}")
             print(f"即将提交给教务系统的纯数组: {selected_codes}")
             
             return selected_codes 
                 
         except Exception as e:
-            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")        
+            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
+        #     # ---------------------------------------------------------
+        #     # 4. 组装今日校园需要的返回值 (极简模式)
+        #     # ---------------------------------------------------------
+        #     objects = solution.get('objects', [])
+            
+        #     selected_codes = []
+        #     for index in objects:
+        #         idx = int(index)
+        #         if idx < len(image_infos):
+        #             selected_codes.append(image_infos[idx]['code'])
+            
+        #     # ⚠️ 这里是最终的秘密武器：什么包装都不要加！直接返回包含 32 位码的纯数组！
+        #     print(f"即将提交给教务系统的纯数组: {selected_codes}")
+            
+        #     return selected_codes 
+                
+        # except Exception as e:
+        #     raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")        
 
     
 #     def handleCapcha(self):
