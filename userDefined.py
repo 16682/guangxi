@@ -147,7 +147,8 @@ class ExecuteEvent:
             return {
                 "code": 200,
                 "msg": "success",
-                "data": ans_string  # 直接把拼接好的 code 串传给教务系统
+                "data": selected_codes
+                # "data": ans_string  # 直接把拼接好的 code 串传给教务系统
             }
         except Exception as e:
             raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
