@@ -21,18 +21,14 @@ class ExecuteEvent:
             return self.handleCapcha()
         else:
             return "什么都没有干"
+    
     def handleCapcha(self):
+        import re # 记得顶部如果没有的话加上 import re
+        
         # 1. 提取今日校园发来的验证码数据
         capCode = self.context['capcode']
         target_name = capCode['result']['name'] 
         image_infos = capCode['result']['imageInfos'] 
-        
-        # =========================================================
-        # 🚀 战术拦截：遇到谷歌题库里没有的词，直接报错重试，白嫖到底
-        # =========================================================
-        unsupported_keywords = ["高铁", "飞机", "火车", "船", "轮船", "猫", "狗", "中国结", "灯笼"] 
-        if target_name in unsupported_keywords:
-            raise Exception(f"触发战术拦截：YesCaptcha 暂不支持识别[{target_name}]，主动放弃，等待脚本自动刷新！")
 
         print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
 
@@ -50,6 +46,7 @@ class ExecuteEvent:
             for i, img in enumerate(imgs):
                 grid.paste(img, (w * (i % 3), h * (i // 3)))
             
+            # 大模型看图不需要太高清，300x300 足够且节省 Token
             grid = grid.resize((300, 300))
             
             buffered = BytesIO()
@@ -59,77 +56,77 @@ class ExecuteEvent:
         except Exception as e:
             raise Exception(f"图片下载或拼接失败: {str(e)}")
 
-        # 3. 对接 YesCaptcha 打码平台
-        client_key = "34ef524608d4f962a7f3a8c44f90da676df41134120429"
+        # =========================================================
+        # 3. 降维打击：对接智谱视觉大模型 (GLM-4V)
+        # =========================================================
+        zhipu_api_key = "540691c61ffc4eeb9f6dcf5eef3257da.OTIYuNr8XzlTFZGb"  # 👈 替换为你注册的智谱 API Key
+        
+        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {zhipu_api_key}"
+        }
+        
+        # 精心设计的 Prompt，要求 AI 扮演无情的分类机器
+        prompt = f"这是一张3x3的九宫格图片（按照从左到右、从上到下的顺序，编号为0到8）。请帮我找出所有包含“{target_name}”的图片。请严格只返回一个包含编号数字的数组，例如：[0, 2, 5]。千万不要输出任何解释性的文字！"
         
         payload = {
-            "clientKey": client_key,
-            "task": {
-                "type": "ReCaptchaV2Classification", 
-                "image": img_base64,        
-                "question": target_name    
-            }
+            "model": "glm-4v",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{img_base64}"
+                            }
+                        }
+                    ]
+                }
+            ]
         }
         
         try:
-            print(f"正在向 YesCaptcha 提交 [{target_name}] 识别任务...")
-            create_res = requests.post("https://api.yescaptcha.com/createTask", json=payload).json()
+            print(f"正在向 智谱AI大模型 提交 [{target_name}] 识别任务...")
+            response = requests.post(url, headers=headers, json=payload).json()
             
-            if create_res.get('errorId') != 0:
-                raise Exception(f"提交任务失败: {create_res.get('errorDescription')}")
+            if 'error' in response:
+                raise Exception(f"大模型报错: {response['error'].get('message')}")
                 
-            task_id = create_res.get('taskId')
+            # 获取 AI 的回答文本
+            ai_reply = response['choices'][0]['message']['content']
+            print(f"大模型原始回答: {ai_reply}")
             
-            result_payload = {
-                "clientKey": client_key,
-                "taskId": task_id
-            }
-            
-            solution = None
-            for i in range(15):
-                time.sleep(2) 
-                res = requests.post("https://api.yescaptcha.com/getTaskResult", json=result_payload).json()
-                status = res.get('status')
-                
-                if status == 'ready':
-                    solution = res.get('solution')
-                    print(f"识别完成！耗时 {(i+1)*2} 秒，结果: {solution}")
-                    break
-                elif status == 'processing':
-                    continue
-                else:
-                    raise Exception(f"打码异常中断: {res}")
-                    
-            if not solution:
-                raise Exception("打码超时，AI 未能在 30 秒内返回结果")
-
             # ---------------------------------------------------------
-            # 4. 组装今日校园需要的返回值 (基于置信度的强权模式)
+            # 4. 暴力提取与格式化
             # ---------------------------------------------------------
-            
-            # 我们直接拿 AI 的底层概率数据自己做主！
-            confidences = solution.get('confidences', [])
-            if confidences:
-                # 只要概率大于 50% (0.5)，我们就强制选中它！
-                objects = [i for i, conf in enumerate(confidences) if conf > 0.5]
-            else:
-                # 兼容模式：万一没有概率数据，再用它默认的
-                objects = solution.get('objects', [])
+            # 使用正则表达式提取回答里的所有数字，防止 AI 废话干扰
+            extracted_numbers = re.findall(r'\d+', ai_reply)
             
             selected_codes = []
-            for index in objects:
-                idx = int(index)
-                if idx < len(image_infos):
+            for num_str in extracted_numbers:
+                idx = int(num_str)
+                # 确保提取出的数字是 0-8 之间的合法索引
+                if 0 <= idx < 9 and idx < len(image_infos):
                     selected_codes.append(image_infos[idx]['code'])
             
-            print(f"YesCaptcha原始返回对象: {solution.get('objects')}")
-            print(f"经过强权修正后的正确索引: {objects}")
-            print(f"即将提交给教务系统的纯数组: {selected_codes}")
+            # 去重（防止 AI 回答里有重复数字）
+            selected_codes = list(set(selected_codes))
+            
+            if not selected_codes:
+                raise Exception("大模型未能识别出任何有效数字，可能是没找到目标图片。")
+                
+            print(f"精准提取！即将提交给教务系统的纯数组: {selected_codes}")
             
             return selected_codes 
                 
         except Exception as e:
-            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
+            raise Exception(f"大模型识别流程崩溃: {str(e)}")    
         #     # ---------------------------------------------------------
         #     # 4. 组装今日校园需要的返回值 (极简模式)
         #     # ---------------------------------------------------------
