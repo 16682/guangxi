@@ -46,6 +46,9 @@ class ExecuteEvent:
             # 将 9 张图按顺序贴到大图上
             for i, img in enumerate(imgs):
                 grid.paste(img, (w * (i % 3), h * (i // 3)))
+                
+            # 👇 新增这一行：将 600x600 的拼图强制缩放为标准的 300x300
+            grid = grid.resize((300, 300))
             
             # 将拼好的大图转为 Base64 格式
             buffered = BytesIO()
