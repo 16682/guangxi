@@ -30,7 +30,7 @@ class ExecuteEvent:
         target_name = capCode['result']['name'] 
         image_infos = capCode['result']['imageInfos'] 
 
-        print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
+        print(f"[{target_name}] 开始处理九宫格验证码，准备高清拼接图片...")
 
         # 2. 下载并拼接 9 张图片
         try:
@@ -46,8 +46,8 @@ class ExecuteEvent:
             for i, img in enumerate(imgs):
                 grid.paste(img, (w * (i % 3), h * (i // 3)))
             
-            # 缩放到 300x300，既保证大模型能看清，又极大地节省 Token 费用
-            grid = grid.resize((300, 300))
+            # ⚠️ 秘密武器：删除了之前的 resize 压缩代码！
+            # 保持原画质高清拼接，让通义千问大模型能看清"香蕉"的每一个细节！
             
             buffered = BytesIO()
             grid.save(buffered, format="JPEG")
@@ -57,25 +57,25 @@ class ExecuteEvent:
             raise Exception(f"图片下载或拼接失败: {str(e)}")
 
         # =========================================================
-        # 3. 国产性价比大模型：对接 DeepSeek API
+        # 3. 终极救场大模型：对接阿里通义千问视觉版 (Qwen-VL-Max)
         # =========================================================
         
-        # 填入你在 DeepSeek 开放平台申请的 API Key
-        deepseek_api_key = "sk-6eb15a622e6b4d89b99dfc8ef14d1c67"  
+        # 去阿里云百炼大模型平台申请的 API Key
+        qwen_api_key = "sk-7c6d8a2ef1f34dd792dbe36b8e1280fa"  
         
-        # DeepSeek 的官方接口地址 (国内直连，不报错)
-        api_url = "https://api.deepseek.com/chat/completions" 
+        # 阿里云百炼的 OpenAI 兼容接口 (国内直连，拒绝报错)
+        api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" 
         
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {deepseek_api_key}"
+            "Authorization": f"Bearer {qwen_api_key}"
         }
         
-        # 给 DeepSeek 下达严格的身份指令
+        # 给通义千问下达严格的身份指令
         prompt = f"这是一张3x3的九宫格图片，按照从左到右、从上到下的顺序，编号依次为0到8。请帮我找出所有包含“{target_name}”的图片编号。请严格只返回一个包含编号数字的数组，例如：[0, 2, 5]。不要输出任何解释性的文字！"
         
         payload = {
-            "model": "deepseek-chat",  # DeepSeek 的主模型名称，原生支持多模态视觉
+            "model": "qwen-vl-max",  # 目前国内视觉识别能力最顶级的模型
             "messages": [
                 {
                     "role": "user",
@@ -94,31 +94,29 @@ class ExecuteEvent:
                 }
             ],
             "max_tokens": 50,
-            "temperature": 0.1 # 调低温度，让回答更像毫无感情的机器，减少废话
+            "temperature": 0.1 
         }
         
         try:
-            print(f"正在向 DeepSeek 提交 [{target_name}] 识别任务...")
+            print(f"正在向 阿里通义千问 提交 [{target_name}] 识别任务...")
             response = requests.post(api_url, headers=headers, json=payload).json()
             
-            # 捕获接口可能返回的错误信息（如余额不足、Key无效）
+            # 捕获接口可能返回的错误信息
             if 'error' in response:
-                raise Exception(f"DeepSeek 接口报错: {response['error'].get('message')}")
+                raise Exception(f"通义千问 接口报错: {response['error'].get('message')}")
                 
-            # 获取 DeepSeek 的文本回答
+            # 获取大模型的文本回答
             ai_reply = response['choices'][0]['message']['content']
-            print(f"DeepSeek 原始回答: {ai_reply}")
+            print(f"通义千问 原始回答: {ai_reply}")
             
             # ---------------------------------------------------------
             # 4. 暴力提取与格式化
             # ---------------------------------------------------------
-            # 无论 DeepSeek 怎么回答，用正则表达式把里面的数字全抓出来
             extracted_numbers = re.findall(r'\d+', ai_reply)
             
             selected_codes = []
             for num_str in extracted_numbers:
                 idx = int(num_str)
-                # 防止大模型产生幻觉输出超过 8 的数字
                 if 0 <= idx < 9 and idx < len(image_infos):
                     selected_codes.append(image_infos[idx]['code'])
             
@@ -126,14 +124,14 @@ class ExecuteEvent:
             selected_codes = list(set(selected_codes))
             
             if not selected_codes:
-                raise Exception("DeepSeek 未能识别出任何有效数字，可能是没有找到符合要求的图片。")
+                raise Exception("通义千问 未能识别出任何有效数字，可能是没有找到符合要求的图片。")
                 
-            print(f"坐标转换成功！即将提交给教务系统的纯数组: {selected_codes}")
+            print(f"大模型提取成功！即将提交给教务系统的纯数组: {selected_codes}")
             
             return selected_codes 
                 
         except Exception as e:
-            raise Exception(f"DeepSeek 打码流程崩溃: {str(e)}")    
+            raise Exception(f"通义千问 打码流程崩溃: {str(e)}") 
         #     # ---------------------------------------------------------
         #     # 4. 组装今日校园需要的返回值 (极简模式)
         #     # ---------------------------------------------------------
