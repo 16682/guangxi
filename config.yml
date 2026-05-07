@@ -79,6 +79,10 @@ users: #!!!!!别误删了这一行!!!!!
     schoolName: 重庆三峡学院 # 学校全称
     username: "202502124107" # 学号或者工号
     password: "7777777Cjq!" # 密码
+    proxy:
+      type: panda
+      api: http://pandavip.xiongmaodaili.com/xiongmao-web/apiPlus/vgl?secret=d721827b71ac55441d030d759bee565a&orderNo=VGL20220917133314ohkHufv4&count=10&isTxt=0&proxyType=1&validTime=0&removal=0&cityIds=
+      maxRetry: 3
     # 一般需填项-------
     abnormalReason: "" # 范围外签到原因
     photo: https://raw.githubusercontent.com/16682/tu/main/test/IMG_20260507_124446.jpg # 签到照片(不需要可不填)
