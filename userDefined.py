@@ -23,7 +23,7 @@ class ExecuteEvent:
             return "什么都没有干"
     
     def handleCapcha(self):
-        import re # 记得顶部如果没有的话加上 import re
+        import re
         
         # 1. 提取今日校园发来的验证码数据
         capCode = self.context['capcode']
@@ -46,7 +46,7 @@ class ExecuteEvent:
             for i, img in enumerate(imgs):
                 grid.paste(img, (w * (i % 3), h * (i // 3)))
             
-            # 大模型看图不需要太高清，300x300 足够且节省 Token
+            # 缩放到 300x300，既保证大模型能看清，又极大地节省 Token 费用
             grid = grid.resize((300, 300))
             
             buffered = BytesIO()
@@ -57,21 +57,25 @@ class ExecuteEvent:
             raise Exception(f"图片下载或拼接失败: {str(e)}")
 
         # =========================================================
-        # 3. 降维打击：对接智谱视觉大模型 (GLM-4V)
+        # 3. 国产性价比大模型：对接 DeepSeek API
         # =========================================================
-        zhipu_api_key = "540691c61ffc4eeb9f6dcf5eef3257da.OTIYuNr8XzlTFZGb"  # 👈 替换为你注册的智谱 API Key
         
-        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        # 填入你在 DeepSeek 开放平台申请的 API Key
+        deepseek_api_key = "sk-6eb15a622e6b4d89b99dfc8ef14d1c67"  
+        
+        # DeepSeek 的官方接口地址 (国内直连，不报错)
+        api_url = "https://api.deepseek.com/chat/completions" 
+        
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {zhipu_api_key}"
+            "Authorization": f"Bearer {deepseek_api_key}"
         }
         
-        # 精心设计的 Prompt，要求 AI 扮演无情的分类机器
-        prompt = f"这是一张3x3的九宫格图片（按照从左到右、从上到下的顺序，编号为0到8）。请帮我找出所有包含“{target_name}”的图片。请严格只返回一个包含编号数字的数组，例如：[0, 2, 5]。千万不要输出任何解释性的文字！"
+        # 给 DeepSeek 下达严格的身份指令
+        prompt = f"这是一张3x3的九宫格图片，按照从左到右、从上到下的顺序，编号依次为0到8。请帮我找出所有包含“{target_name}”的图片编号。请严格只返回一个包含编号数字的数组，例如：[0, 2, 5]。不要输出任何解释性的文字！"
         
         payload = {
-            "model": "glm-4v",
+            "model": "deepseek-chat",  # DeepSeek 的主模型名称，原生支持多模态视觉
             "messages": [
                 {
                     "role": "user",
@@ -88,45 +92,48 @@ class ExecuteEvent:
                         }
                     ]
                 }
-            ]
+            ],
+            "max_tokens": 50,
+            "temperature": 0.1 # 调低温度，让回答更像毫无感情的机器，减少废话
         }
         
         try:
-            print(f"正在向 智谱AI大模型 提交 [{target_name}] 识别任务...")
-            response = requests.post(url, headers=headers, json=payload).json()
+            print(f"正在向 DeepSeek 提交 [{target_name}] 识别任务...")
+            response = requests.post(api_url, headers=headers, json=payload).json()
             
+            # 捕获接口可能返回的错误信息（如余额不足、Key无效）
             if 'error' in response:
-                raise Exception(f"大模型报错: {response['error'].get('message')}")
+                raise Exception(f"DeepSeek 接口报错: {response['error'].get('message')}")
                 
-            # 获取 AI 的回答文本
+            # 获取 DeepSeek 的文本回答
             ai_reply = response['choices'][0]['message']['content']
-            print(f"大模型原始回答: {ai_reply}")
+            print(f"DeepSeek 原始回答: {ai_reply}")
             
             # ---------------------------------------------------------
             # 4. 暴力提取与格式化
             # ---------------------------------------------------------
-            # 使用正则表达式提取回答里的所有数字，防止 AI 废话干扰
+            # 无论 DeepSeek 怎么回答，用正则表达式把里面的数字全抓出来
             extracted_numbers = re.findall(r'\d+', ai_reply)
             
             selected_codes = []
             for num_str in extracted_numbers:
                 idx = int(num_str)
-                # 确保提取出的数字是 0-8 之间的合法索引
+                # 防止大模型产生幻觉输出超过 8 的数字
                 if 0 <= idx < 9 and idx < len(image_infos):
                     selected_codes.append(image_infos[idx]['code'])
             
-            # 去重（防止 AI 回答里有重复数字）
+            # 数组去重
             selected_codes = list(set(selected_codes))
             
             if not selected_codes:
-                raise Exception("大模型未能识别出任何有效数字，可能是没找到目标图片。")
+                raise Exception("DeepSeek 未能识别出任何有效数字，可能是没有找到符合要求的图片。")
                 
-            print(f"精准提取！即将提交给教务系统的纯数组: {selected_codes}")
+            print(f"坐标转换成功！即将提交给教务系统的纯数组: {selected_codes}")
             
             return selected_codes 
                 
         except Exception as e:
-            raise Exception(f"大模型识别流程崩溃: {str(e)}")    
+            raise Exception(f"DeepSeek 打码流程崩溃: {str(e)}")    
         #     # ---------------------------------------------------------
         #     # 4. 组装今日校园需要的返回值 (极简模式)
         #     # ---------------------------------------------------------
