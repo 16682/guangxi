@@ -113,39 +113,42 @@ class ExecuteEvent:
             # ---------------------------------------------------------
             # 4. 组装今日校园需要的返回值
             # ---------------------------------------------------------
-            # YesCaptcha 返回的 solution 格式通常为 {"objects": [0, 2, 5]} 
-            # (注意：它是从 0 开始计数的，0代表左上角第一张图)
-            objects = solution.get('objects', [])
-            
-            # 将索列表 [0, 2, 5] 传给外层逻辑
-            selected_indices = [int(x) for x in objects]
-            
-            return {
-                "code": 200,
-                "msg": "success",
-                "data": selected_indices
-            }
-        
+            # # YesCaptcha 返回的 solution 格式通常为 {"objects": [0, 2, 5]} 
+            # # (注意：它是从 0 开始计数的，0代表左上角第一张图)
             # objects = solution.get('objects', [])
             
-            # # 将序号转换为教务系统需要的 X,Y 坐标
-            # coordinates = []
-            # for index in objects:
-            #     idx = int(index)
-            #     x = (idx % 3) * 100 + 50
-            #     y = (idx // 3) * 100 + 50
-            #     # 常见格式1：原版 ruoli 通常需要 "x,y" 的字符串数组
-            #     coordinates.append(f"{x},{y}")
-            
-            # # 将坐标数组拼成一个完整的字符串，比如 "150,50,150,150,50,250"
-            # # (这是今日校园最常见的坐标提交格式)
-            # coord_string = ",".join(coordinates)
+            # # 将索列表 [0, 2, 5] 传给外层逻辑
+            # selected_indices = [int(x) for x in objects]
             
             # return {
             #     "code": 200,
             #     "msg": "success",
-            #     "data": coord_string
-            # }    
+            #     "data": selected_indices
+            # }
+        
+            # ---------------------------------------------------------
+            # 4. 组装今日校园需要的返回值 (将序号转为图片的专属 code)
+            # ---------------------------------------------------------
+            objects = solution.get('objects', [])
+            
+            # 根据 YesCaptcha 返回的序号，去提取这几张图真正的 code 码
+            selected_codes = []
+            for index in objects:
+                idx = int(index)
+                if idx < len(image_infos):
+                    # 拿到那串 32 位的专属 code
+                    img_code = image_infos[idx]['code'] 
+                    selected_codes.append(img_code)
+            
+            # 将选中的 code 用逗号拼接成一个字符串 (最常见的传参格式)
+            # 例如: "05742d87...,f02a63bf...,2d3ae540..."
+            ans_string = ",".join(selected_codes)
+            
+            return {
+                "code": 200,
+                "msg": "success",
+                "data": ans_string  # 直接把拼接好的 code 串传给教务系统
+            }
         except Exception as e:
             raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
     
