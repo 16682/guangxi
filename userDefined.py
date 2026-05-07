@@ -21,7 +21,6 @@ class ExecuteEvent:
             return self.handleCapcha()
         else:
             return "什么都没有干"
-            
     def handleCapcha(self):
         # 1. 提取今日校园发来的验证码数据
         capCode = self.context['capcode']
@@ -29,11 +28,11 @@ class ExecuteEvent:
         image_infos = capCode['result']['imageInfos'] 
         
         # =========================================================
-        # 🚀 战术拦截：遇到谷歌题库里没有的词，直接报错重试，不浪费打码费
+        # 🚀 战术拦截：遇到谷歌题库里没有的词，直接报错重试，白嫖到底
         # =========================================================
-        unsupported_keywords = ["高铁", "飞机", "火车", "船", "轮船", "猫", "狗"] # 可根据实际情况补充
+        unsupported_keywords = ["高铁", "飞机", "火车", "船", "轮船", "猫", "狗", "中国结", "灯笼"] 
         if target_name in unsupported_keywords:
-            raise Exception(f"触发战术拦截：YesCaptcha 暂不支持识别[{target_name}]，主动放弃，等待脚本自动刷新下一题！")
+            raise Exception(f"触发战术拦截：YesCaptcha 暂不支持识别[{target_name}]，主动放弃，等待脚本自动刷新！")
 
         print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
 
@@ -51,7 +50,6 @@ class ExecuteEvent:
             for i, img in enumerate(imgs):
                 grid.paste(img, (w * (i % 3), h * (i // 3)))
             
-            # 缩放至符合 YesCaptcha 要求的标准尺寸
             grid = grid.resize((300, 300))
             
             buffered = BytesIO()
@@ -106,7 +104,7 @@ class ExecuteEvent:
                 raise Exception("打码超时，AI 未能在 30 秒内返回结果")
 
             # ---------------------------------------------------------
-            # 4. 组装今日校园需要的返回值 (严格格式控制)
+            # 4. 组装今日校园需要的返回值 (极简模式)
             # ---------------------------------------------------------
             objects = solution.get('objects', [])
             
@@ -116,20 +114,14 @@ class ExecuteEvent:
                 if idx < len(image_infos):
                     selected_codes.append(image_infos[idx]['code'])
             
-            # ⚠️ 强制拼接为纯字符串格式，例如 "codeA,codeB,codeC"
-            ans_string = ",".join(selected_codes)
+            # ⚠️ 这里是最终的秘密武器：什么包装都不要加！直接返回包含 32 位码的纯数组！
+            print(f"即将提交给教务系统的纯数组: {selected_codes}")
             
-            print(f"即将提交给教务系统的正确格式: {ans_string}")
-            
-            return {
-                "code": 200,
-                "msg": "success",
-                "data": ans_string  # 绝不能传数组！
-            }
+            return selected_codes 
                 
         except Exception as e:
-            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
-    
+            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")        
+
     
 #     def handleCapcha(self):
 #         '''验证码识别'''
