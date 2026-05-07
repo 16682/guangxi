@@ -40,7 +40,24 @@ def sign_api():
             # 这里我们只修改 'users' 这个列表，其他全局配置（如推送、打码等）原封不动
             existing_config['users'] = [
                 {
-                    'type': 2,         # 或者用你接收到的前端参数
+                    # 任务一：日常签到 (type: 1)
+                {
+                    'type': 1,         
+                    'schoolName': school,
+                    'username': username,
+                    'password': password,
+                    'signLevel': 1,
+                    'title': 0,
+                    'checkTitle': 0,
+                    'abnormalReason': "", 
+                    'lon': float(lon),  
+                    'lat': float(lat),  
+                    'address': school,
+                    'photo': photo_url
+                },
+                # 任务二：查寝签到 (type: 2)
+                {
+                    'type': 2,         
                     'schoolName': school,
                     'username': username,
                     'password': password,
@@ -53,6 +70,7 @@ def sign_api():
                     'address': school,
                     'photo': photo_url
                 }
+                    
             ]
 
             # ==========================================
