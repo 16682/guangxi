@@ -9,7 +9,6 @@ def index(event, context):
     event = ExecuteEvent(event, context)
     return event.execute()
 
-
 class ExecuteEvent:
     def __init__(self, event, context):
         self.event = event
@@ -22,6 +21,110 @@ class ExecuteEvent:
             return self.handleCapcha()
         else:
             return "什么都没有干"
+
+    def handleCapcha(self):
+        # 1. 提取今日校园发来的验证码数据 (⚠️ 修复了这里的 self.context)
+        capCode = self.context['capcode']
+        target_name = capCode['result']['name'] # 题目，例如: "摩托车"
+        image_infos = capCode['result']['imageInfos'] # 包含 9 个图片链接的列表
+        
+        print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
+
+        # 2. 下载并拼接 9 张图片 (因为打码平台需要一张完整的 3x3 大图)
+        try:
+            imgs = []
+            for info in image_infos:
+                img_url = info['path']
+                # 下载图片
+                img_res = requests.get(img_url, verify=False)
+                imgs.append(Image.open(BytesIO(img_res.content)))
+            
+            # 获取单张图片宽高，创建 3x3 的大图画布
+            w, h = imgs[0].size
+            grid = Image.new('RGB', (w * 3, h * 3))
+            
+            # 将 9 张图按顺序贴到大图上
+            for i, img in enumerate(imgs):
+                grid.paste(img, (w * (i % 3), h * (i // 3)))
+            
+            # 将拼好的大图转为 Base64 格式
+            buffered = BytesIO()
+            grid.save(buffered, format="JPEG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            print("图片拼接并转换 Base64 完成！")
+            
+        except Exception as e:
+            raise Exception(f"图片下载或拼接失败: {str(e)}")
+
+        # =========================================================
+        # 3. 对接 YesCaptcha 打码平台
+        # =========================================================
+        client_key = "34ef524608d4f962a7f3a8c44f90da676df41134120429"
+        
+        # 构建任务数据
+        payload = {
+            "clientKey": client_key,
+            "task": {
+                "type": "ReCaptchaV2Classification", # 官方推荐的 3x3 九宫格分类任务
+                "image": img_base64,        
+                "question": target_name    
+            }
+        }
+        
+        try:
+            # 第一步：提交任务
+            print(f"正在向 YesCaptcha 提交 [{target_name}] 识别任务...")
+            create_res = requests.post("https://api.yescaptcha.com/createTask", json=payload).json()
+            
+            if create_res.get('errorId') != 0:
+                raise Exception(f"提交任务失败: {create_res.get('errorDescription')}")
+                
+            task_id = create_res.get('taskId')
+            print(f"提交成功，获得任务单号: {task_id}，开始轮询结果...")
+            
+            # 第二步：轮询等待结果（最多等 15 次，每次 2 秒）
+            result_payload = {
+                "clientKey": client_key,
+                "taskId": task_id
+            }
+            
+            solution = None
+            for i in range(15):
+                time.sleep(2) # 必须等待，AI 识别需要时间
+                res = requests.post("https://api.yescaptcha.com/getTaskResult", json=result_payload).json()
+                status = res.get('status')
+                
+                if status == 'ready':
+                    solution = res.get('solution')
+                    print(f"识别完成！耗时 {(i+1)*2} 秒，结果: {solution}")
+                    break
+                elif status == 'processing':
+                    print(f"正在识别中，已等待 {(i+1)*2} 秒...")
+                    continue
+                else:
+                    raise Exception(f"打码异常中断: {res}")
+                    
+            if not solution:
+                raise Exception("打码超时，AI 未能在 30 秒内返回结果")
+
+            # ---------------------------------------------------------
+            # 4. 组装今日校园需要的返回值
+            # ---------------------------------------------------------
+            # YesCaptcha 返回的 solution 格式通常为 {"objects": [0, 2, 5]} 
+            # (注意：它是从 0 开始计数的，0代表左上角第一张图)
+            objects = solution.get('objects', [])
+            
+            # 将索列表 [0, 2, 5] 传给外层逻辑
+            selected_indices = [int(x) for x in objects]
+            
+            return {
+                "code": 200,
+                "msg": "success",
+                "data": selected_indices
+            }
+                
+        except Exception as e:
+            raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
     
 #     def handleCapcha(self):
 #         '''验证码识别'''
@@ -69,112 +172,112 @@ class ExecuteEvent:
 #             '''报错'''
 #             raise Exception(
 #                 "图片验证码识别错误: \n验证码问题未解决, 请手签(就是用今日校园app自己手动签到的意思)\n错误信息")
-import time
-import requests
-import base64
-from io import BytesIO
-from PIL import Image
+# import time
+# import requests
+# import base64
+# from io import BytesIO
+# from PIL import Image
 
-def handleCapcha(self):
-    # 1. 提取今日校园发来的验证码数据
-    capCode = context['capcode']
-    target_name = capCode['result']['name'] # 题目，例如: "摩托车"
-    image_infos = capCode['result']['imageInfos'] # 包含 9 个图片链接的列表
+# def handleCapcha(self):
+#     # 1. 提取今日校园发来的验证码数据
+#     capCode = context['capcode']
+#     target_name = capCode['result']['name'] # 题目，例如: "摩托车"
+#     image_infos = capCode['result']['imageInfos'] # 包含 9 个图片链接的列表
     
-    print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
+#     print(f"[{target_name}] 开始处理九宫格验证码，准备拼接图片...")
 
-    # 2. 下载并拼接 9 张图片 (因为打码平台需要一张完整的 3x3 大图)
-    try:
-        imgs = []
-        for info in image_infos:
-            img_url = info['path']
-            # 下载图片
-            img_res = requests.get(img_url, verify=False)
-            imgs.append(Image.open(BytesIO(img_res.content)))
+#     # 2. 下载并拼接 9 张图片 (因为打码平台需要一张完整的 3x3 大图)
+#     try:
+#         imgs = []
+#         for info in image_infos:
+#             img_url = info['path']
+#             # 下载图片
+#             img_res = requests.get(img_url, verify=False)
+#             imgs.append(Image.open(BytesIO(img_res.content)))
         
-        # 获取单张图片宽高，创建 3x3 的大图画布
-        w, h = imgs[0].size
-        grid = Image.new('RGB', (w * 3, h * 3))
+#         # 获取单张图片宽高，创建 3x3 的大图画布
+#         w, h = imgs[0].size
+#         grid = Image.new('RGB', (w * 3, h * 3))
         
-        # 将 9 张图按顺序贴到大图上
-        for i, img in enumerate(imgs):
-            grid.paste(img, (w * (i % 3), h * (i // 3)))
+#         # 将 9 张图按顺序贴到大图上
+#         for i, img in enumerate(imgs):
+#             grid.paste(img, (w * (i % 3), h * (i // 3)))
         
-        # 将拼好的大图转为 Base64 格式
-        buffered = BytesIO()
-        grid.save(buffered, format="JPEG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        print("图片拼接并转换 Base64 完成！")
+#         # 将拼好的大图转为 Base64 格式
+#         buffered = BytesIO()
+#         grid.save(buffered, format="JPEG")
+#         img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+#         print("图片拼接并转换 Base64 完成！")
         
-    except Exception as e:
-        raise Exception(f"图片下载或拼接失败: {str(e)}")
+#     except Exception as e:
+#         raise Exception(f"图片下载或拼接失败: {str(e)}")
 
-    # =========================================================
-    # 3. 对接 YesCaptcha 打码平台
-    # =========================================================
-    client_key = "34ef524608d4f962a7f3a8c44f90da676df41134120429"
+#     # =========================================================
+#     # 3. 对接 YesCaptcha 打码平台
+#     # =========================================================
+#     client_key = "34ef524608d4f962a7f3a8c44f90da676df41134120429"
     
-    # 构建任务数据
-    payload = {
-        "clientKey": client_key,
-        "task": {
-            "type": "ReCaptchaV2Classification", # 官方推荐的 3x3 九宫格分类任务
-            "image": img_base64,        
-            "question": target_name    
-        }
-    }
+#     # 构建任务数据
+#     payload = {
+#         "clientKey": client_key,
+#         "task": {
+#             "type": "ReCaptchaV2Classification", # 官方推荐的 3x3 九宫格分类任务
+#             "image": img_base64,        
+#             "question": target_name    
+#         }
+#     }
     
-    try:
-        # 第一步：提交任务
-        print(f"正在向 YesCaptcha 提交 [{target_name}] 识别任务...")
-        create_res = requests.post("https://api.yescaptcha.com/createTask", json=payload).json()
+#     try:
+#         # 第一步：提交任务
+#         print(f"正在向 YesCaptcha 提交 [{target_name}] 识别任务...")
+#         create_res = requests.post("https://api.yescaptcha.com/createTask", json=payload).json()
         
-        if create_res.get('errorId') != 0:
-            raise Exception(f"提交任务失败: {create_res.get('errorDescription')}")
+#         if create_res.get('errorId') != 0:
+#             raise Exception(f"提交任务失败: {create_res.get('errorDescription')}")
             
-        task_id = create_res.get('taskId')
-        print(f"提交成功，获得任务单号: {task_id}，开始轮询结果...")
+#         task_id = create_res.get('taskId')
+#         print(f"提交成功，获得任务单号: {task_id}，开始轮询结果...")
         
-        # 第二步：轮询等待结果（最多等 15 次，每次 2 秒）
-        result_payload = {
-            "clientKey": client_key,
-            "taskId": task_id
-        }
+#         # 第二步：轮询等待结果（最多等 15 次，每次 2 秒）
+#         result_payload = {
+#             "clientKey": client_key,
+#             "taskId": task_id
+#         }
         
-        solution = None
-        for i in range(15):
-            time.sleep(2) # 必须等待，AI 识别需要时间
-            res = requests.post("https://api.yescaptcha.com/getTaskResult", json=result_payload).json()
-            status = res.get('status')
+#         solution = None
+#         for i in range(15):
+#             time.sleep(2) # 必须等待，AI 识别需要时间
+#             res = requests.post("https://api.yescaptcha.com/getTaskResult", json=result_payload).json()
+#             status = res.get('status')
             
-            if status == 'ready':
-                solution = res.get('solution')
-                print(f"识别完成！耗时 {(i+1)*2} 秒，结果: {solution}")
-                break
-            elif status == 'processing':
-                print(f"正在识别中，已等待 {(i+1)*2} 秒...")
-                continue
-            else:
-                raise Exception(f"打码异常中断: {res}")
+#             if status == 'ready':
+#                 solution = res.get('solution')
+#                 print(f"识别完成！耗时 {(i+1)*2} 秒，结果: {solution}")
+#                 break
+#             elif status == 'processing':
+#                 print(f"正在识别中，已等待 {(i+1)*2} 秒...")
+#                 continue
+#             else:
+#                 raise Exception(f"打码异常中断: {res}")
                 
-        if not solution:
-            raise Exception("打码超时，AI 未能在 30 秒内返回结果")
+#         if not solution:
+#             raise Exception("打码超时，AI 未能在 30 秒内返回结果")
 
-        # ---------------------------------------------------------
-        # 4. 组装今日校园需要的返回值
-        # ---------------------------------------------------------
-        # YesCaptcha 返回的 solution 格式通常为 {"objects": [0, 2, 5]} 
-        # (注意：它是从 0 开始计数的，0代表左上角第一张图)
-        objects = solution.get('objects', [])
+#         # ---------------------------------------------------------
+#         # 4. 组装今日校园需要的返回值
+#         # ---------------------------------------------------------
+#         # YesCaptcha 返回的 solution 格式通常为 {"objects": [0, 2, 5]} 
+#         # (注意：它是从 0 开始计数的，0代表左上角第一张图)
+#         objects = solution.get('objects', [])
         
-        # 将索列表 [0, 2, 5] 传给外层逻辑
-        selected_indices = [int(x) for x in objects]
+#         # 将索列表 [0, 2, 5] 传给外层逻辑
+#         selected_indices = [int(x) for x in objects]
         
-        return {
-            "code": 200,
-            "msg": "success",
-            "data": selected_indices
-        }
+#         return {
+#             "code": 200,
+#             "msg": "success",
+#             "data": selected_indices
+#         }
             
-    except Exception as e:
-        raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
+#     except Exception as e:
+#         raise Exception(f"YesCaptcha 打码流程崩溃: {str(e)}")
