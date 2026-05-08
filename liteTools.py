@@ -25,6 +25,8 @@ from io import BytesIO
 
 import checkRepositoryVersion
 
+# 定义统一的伪装 UA 变量，方便后续维护
+UA_MOBILE = "Mozilla/5.0 (Linux; Android 13; Mi 13 Build/TKQ1.221114.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 cpdaily/9.9.11 wisedu/9.9.11"
 
 class reqResponse(requests.Response):
     """requests.reqResponse的子类"""
@@ -380,9 +382,9 @@ class CpdailyTools:
     @staticmethod
     def baiduGeocoding(address: str):
         """地址转坐标"""
-        # 获取百度地图API的密钥
+        # 获取百度地图API的密钥 (已修改为小米 13 UA)
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:50.0) Gecko/20100101 Firefox/50.0"
+            "User-Agent": UA_MOBILE
         }
         url = "https://feres.cpdaily.com/bower_components/baidumap/baidujsSdk@2.js"
         res = requests.get(url, headers=headers, verify=False)
@@ -399,9 +401,9 @@ class CpdailyTools:
     @staticmethod
     def baiduReverseGeocoding(lon: float, lat: float):
         """坐标转地址"""
-        # 获取百度地图API的密钥
+        # 获取百度地图API的密钥 (已修改为小米 13 UA)
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:50.0) Gecko/20100101 Firefox/50.0"
+            "User-Agent": UA_MOBILE
         }
         url = "https://feres.cpdaily.com/bower_components/baidumap/baidujsSdk@2.js"
         res = requests.get(url, headers=headers, verify=False)
@@ -430,8 +432,9 @@ class CpdailyTools:
         signature = datas.get("signature")
         policyHost = datas.get("host")
         ossKey = f"{fileName}.{picType}"
+        # (已修改为小米 13 UA)
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:50.0) Gecko/20100101 Firefox/50.0"
+            "User-Agent": UA_MOBILE
         }
         multipart_encoder = MultipartEncoder(
             fields={  # 这里根据需要进行参数格式设置
@@ -731,8 +734,9 @@ class RT:
             """遍历url列表, 寻找可用图片"""
             # 下载图片
             LL.log(1, f"正在尝试下载[{url}]")
+            # (已修改为小米 13 UA)
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36 Edg/99.0.1150.46",
+                "User-Agent": UA_MOBILE
             }
             try:
                 response = requests.get(url=url, headers=headers, timeout=(10, 20))
@@ -1112,30 +1116,6 @@ class Image:
             canvas_overlay = np.abs(canvas_slide - canvas_xy)
             XE.append(x)
             YE.append(np.sum(canvas_overlay))
-
-        # matplotlib 绘图
-
-        # YE2 = (YE - np.min(YE)) / (np.max(YE) - np.min(YE)) * 100
-        # output = Path("test")
-        # output.mkdir(exist_ok=True)
-        # plt.imshow(canvas_xy, cmap="gray_r")
-        # plt.plot(XE, YE2)
-        # plt.plot([np.argmin(YE2), np.argmin(YE2)], [0, 100])
-        # # plt.savefig(output / f"{time.time()}.png", bbox_inches="tight")
-        # plt.cla()
-
-        # x = 0
-        # while x < canvas_xy.shape[1] - slide_xy.shape[1]:
-        #     canvas_slide = np.zeros(canvas_xy.shape)
-        #     canvas_slide[:, x : x + slide_xy.shape[1]] = slide_xy
-        #     canvas_overlay = np.abs(canvas_slide - canvas_xy)
-
-        #     plt.imshow(canvas_overlay, cmap="gray_r")  # todo_tmp
-        #     plt.plot(XE[0:x], YE2[0:x])
-        #     plt.plot([x, x], [0, 100])
-        #     plt.savefig(f"test/{x+10000}.png", bbox_inches="tight")
-        #     plt.cla()
-        #     x += max(int(YE2[x] / 100 * 5), 1)
 
         return {
             "slide": np.argmin(YE),
