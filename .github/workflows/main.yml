@@ -24,6 +24,66 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         # 如果脚本没有 requirements.txt 但需要特定库，比如 requests，改为：pip install requests
 
-    - name: 4. 运行核心脚本
+    - name: 4. 精准更新 config.yml 配置文件
+      env:
+        INPUT_USERNAME: ${{ github.event.inputs.username }}
+        INPUT_PASSWORD: ${{ github.event.inputs.password }}
+        INPUT_SCHOOL: ${{ github.event.inputs.school }}
+        INPUT_ADDRESS: ${{ github.event.inputs.address }}
       run: |
-        python index.py  # ⚠️ 注意：这里的 main.py 必须换成你仓库里的实际执行文件名
+        python -c "
+        import os
+        import yaml
+        from liteTools import CpdailyTools
+
+        # --- 1. 读取现有配置 ---
+        config_path = 'config.yml'
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                existing_config = yaml.safe_load(f) or {}
+            print('已加载现有 config.yml')
+        else:
+            existing_config = {}
+
+        # --- 2. 获取传入的参数 ---
+        username = os.environ.get('INPUT_USERNAME')
+        password = os.environ.get('INPUT_PASSWORD')
+        school = os.environ.get('INPUT_SCHOOL')
+        address = os.environ.get('INPUT_ADDRESS')
+
+        # --- 3. 获取坐标 ---
+        try:
+            lon, lat = CpdailyTools.baiduGeocoding(address)
+            print(f'坐标获取成功: {lon}, {lat}')
+        except Exception as e:
+            print(f'获取坐标失败: {e}')
+            lon, lat = 0.0, 0.0
+
+        # --- 4. 🌟 核心修改：只更新指定的键值，保留原有的 photo 等其他参数 🌟 ---
+        users = existing_config.get('users', [])
+        
+        # 如果原本文件里连 users 都没有，就先创建两个基础的空字典(签到和查寝)
+        if not users:
+            users = [{'type': 1}, {'type': 2}]
+
+        # 遍历现有的任务列表，精准塞入新的账号密码和地址坐标，绝不碰别的东西！
+        for user in users:
+            user['username'] = username
+            user['password'] = password
+            user['schoolName'] = school
+            user['address'] = address
+            user['lon'] = float(lon)
+            user['lat'] = float(lat)
+            # 注意：这里我们完全没有写 user['photo'] = ''，所以原有的图片链接会原封不动保留！
+
+        existing_config['users'] = users
+
+        # --- 5. 写回文件 ---
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(existing_config, f, allow_unicode=True, sort_keys=False)
+        
+        print('✅ config.yml 更新完成，旧有的 photo 等个性化配置已完美保留！')
+        "
+    # - name: 4. 运行核心脚本
+    #   run: |
+    #     python index.py  # ⚠️ 注意：这里的 main.py 必须换成你仓库里的实际执行文件名
