@@ -68,7 +68,7 @@ def sign_api():
                     'lon': float(lon),  
                     'lat': float(lat),  
                     'address': address,
-                    'photo': photo_url
+                    'photo': photo_url,
                     'deviceId': "B165F069-7E39-7B5B-2DA5-07B0EC4BFBF8" # 🌟🌟 核心防封锁：强制锁死设备码 🌟🌟# 🌟 新增
                 },
                 # 任务二：查寝签到 (type: 2)
@@ -84,7 +84,7 @@ def sign_api():
                     'lon': float(lon),  
                     'lat': float(lat),  
                     'address': address,
-                    'photo': photo_url
+                    'photo': photo_url,
                     'deviceId': "B165F069-7E39-7B5B-2DA5-07B0EC4BFBF8" # 🌟🌟 核心防封锁：强制锁死设备码 🌟🌟
                 }
                     
