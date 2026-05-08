@@ -44,19 +44,74 @@ def sign_api():
     #     # 如果学校名字填得太离谱，或者 API 抽风，拦截错误并返回给前端
     #     return jsonify({'code': 500, 'msg': f'获取学校经纬度失败，请检查学校名称是否正确。错误信息：{str(e)}'})
     # 🌟 核心修改：双保险获取坐标机制
+
+    
+    
     try:
-        # 第一优先级：尝试使用 Python 后端的 CpdailyTools 自己算坐标
-        lon, lat = CpdailyTools.baiduGeocoding(address)
+        print(f"【大模型启动】正在解析地址：{address}")
         
-        # 防御性编程：如果没报错，但返回了空值，人为抛出异常去走兜底
-        if not lon or not lat:
-            raise ValueError("CpdailyTools 查到了空坐标")
+        qwen_api_key = "sk-7c6d8a2ef1f34dd792dbe36b8e1280fa"  
+        api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" 
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {qwen_api_key}"
+        }
+        
+        # 1. 问大模型：下达严格指令
+        payload = {
+            "model": "qwen-max", 
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "你是一个坐标转换API。请输出给定地址的百度地图经纬度。必须且只能回复包含lon和lat的JSON，不要解释，不要使用Markdown标记。"
+                },
+                {
+                    "role": "user",
+                    "content": f"目标地址：{address}"
+                }
+            ],
+            "temperature": 0.01 # 极低温度，保证格式稳定
+        }
+        
+        # 发送网络请求
+        resp = requests.post(api_url, headers=headers, json=payload, timeout=15)
+        resp.raise_for_status()
+        
+        # 2. 获取大模型的原始回答
+        result_text = resp.json()['choices'][0]['message']['content']
+        print(f"[AI 原始回复]：\n{result_text}")
+        
+        # 3. 定位并提取经纬度 (核心救场逻辑)
+        # 使用正则表达式寻找字符串中第一对 { } 及其里面的内容
+        json_match = re.search(r'\{[^{}]*\}', result_text, re.DOTALL)
+        
+        if json_match:
+            # 提取出纯净的 JSON 字符串
+            clean_json_str = json_match.group()
             
+            # 将字符串转换为 Python 字典
+            coord_data = json.loads(clean_json_str)
+            
+            # 4. 赋值给最终变量
+            lon = str(coord_data.get('lon', ''))
+            lat = str(coord_data.get('lat', ''))
+            
+            # 校验大模型是不是随便回了个空字段
+            if not lon or not lat or lon == 'None' or lat == 'None':
+                raise ValueError("大模型返回的 JSON 中缺少 lon 或 lat 字段")
+                
+            print(f"✅ 成功定位并赋值坐标: lon={lon}, lat={lat}")
+            
+        else:
+            # 如果正则表达式没有找到 { }，说明大模型完全没按格式回答
+            raise ValueError("大模型的回复中未找到合法的 JSON 结构")
+
     except Exception as e:
-        # 拦截到网络请求错误（比如海外机器被墙、域名解析失败等）
-        print(f"CpdailyTools 获取坐标失败，准备使用 PHP 传来的兜底坐标。错误原因：{str(e)}")
+        print(f"❌ 大模型获取/解析彻底失败，原因：{str(e)}")
+        print("【启动兜底】启用 PHP 传来的 OSM 坐标...")
         
-        # 第二优先级：自动降级，使用 PHP 算好传过来的坐标
+        # 赋值失败时，自动退回到第二道防线（PHP传来的坐标）
         lon = req_lon
         lat = req_lat
 
