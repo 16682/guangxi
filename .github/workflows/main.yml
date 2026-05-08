@@ -3,6 +3,19 @@ name: DD怪科技自动化运行
 # 触发条件：允许手动运行，或者设定每天定时运行
 on:
   workflow_dispatch: # 核心：保留这个选项，它允许你在页面上手动点击按钮测试
+    inputs:
+      username:
+        description: '账号'
+        required: true
+      password:
+        description: '密码'
+        required: true
+      school:
+        description: '学校'
+        required: true
+      address:
+        description: '详细地址'
+        required: true
   # schedule:
   #   - cron: '30 22 * * *' # 取消注释这两行可以开启定时任务（默认每天北京时间早上 6:30 运行）
 
