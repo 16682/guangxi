@@ -1,6 +1,9 @@
 import os
 import subprocess
 import threading
+import requests
+import json
+import re
 from flask import Flask, request, jsonify
 import yaml
 # 🌟 新增导入 liteTools 中的 CpdailyTools 模块
