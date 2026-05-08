@@ -86,7 +86,7 @@ users: #!!!!!别误删了这一行!!!!!
     # 一般需填项-------
     abnormalReason: "" # 范围外签到原因
     photo: https://raw.githubusercontent.com/16682/tu/main/test/IMG_20260507_124446.jpg # 签到照片(不需要可不填)
-    signLevel: 1 # 签到等级[0:正常签到|1:请假后依然签到|2:请假或已经打卡后依然重复签到]
+    signLevel: 0 # 签到等级[0:正常签到|1:请假后依然签到|2:请假或已经打卡后依然重复签到]
     title: 0 # [str:签到任务的标题|0:取最后一个未签到的任务]
     checkTitle: 1 # 是否检查表单各项的标题[1:检查|0:不检查]
     # forms: # 表单信息
