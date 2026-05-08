@@ -254,18 +254,37 @@ def sign_api():
 
             # 调用日志函数上面
 
-            # 4. 分析执行日志
+            # 4. 分析执行日志 (🌟 核心修复：把里面的 output 全部换成 final_log！)
             if "签到成功" in output or "成功" in output or "success" in output.lower():
-                return jsonify({'code': 200, 'msg': '签到成功', 'log': output})
+                return jsonify({'code': 200, 'msg': '签到成功', 'log': final_log})
             elif "密码错误" in output or "认证失败" in output:
-                return jsonify({'code': 400, 'msg': '账号或密码错误'})
+                return jsonify({'code': 400, 'msg': '账号或密码错误', 'log': final_log}) # 🌟 补上 log
             elif "不需要" in output or "已签到" in output:
-                return jsonify({'code': 200, 'msg': '当前不在签到时间或已完成签到'})
+                return jsonify({'code': 200, 'msg': '当前不在签到时间或已完成签到', 'log': final_log}) # 🌟 补上 log
             else:
-                return jsonify({'code': 400, 'msg': '签到失败，请检查坐标或稍后再试', 'log': output})
+                return jsonify({'code': 400, 'msg': '签到失败，请检查坐标或稍后再试', 'log': final_log})
                 
         except Exception as e:
-            return jsonify({'code': 500, 'msg': f"API执行异常: {str(e)}"})
+            # 🌟 补上崩溃时的日志抓取
+            crash_log = get_latest_log_content("_log/")
+            return jsonify({
+                'code': 500, 
+                'msg': f"API执行异常: {str(e)}", 
+                'log': f"系统崩溃日志:\n{crash_log}"
+            })
+
+        #     # 4. 分析执行日志
+        #     if "签到成功" in output or "成功" in output or "success" in output.lower():
+        #         return jsonify({'code': 200, 'msg': '签到成功', 'log': output})
+        #     elif "密码错误" in output or "认证失败" in output:
+        #         return jsonify({'code': 400, 'msg': '账号或密码错误'})
+        #     elif "不需要" in output or "已签到" in output:
+        #         return jsonify({'code': 200, 'msg': '当前不在签到时间或已完成签到'})
+        #     else:
+        #         return jsonify({'code': 400, 'msg': '签到失败，请检查坐标或稍后再试', 'log': output})
+                
+        # except Exception as e:
+        #     return jsonify({'code': 500, 'msg': f"API执行异常: {str(e)}"})
 
 # 增加一个简单的 ping 接口，用于 UptimeRobot 保活唤醒
 @app.route('/ping', methods=['GET'])
