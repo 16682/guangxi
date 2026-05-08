@@ -32,7 +32,7 @@ def get_latest_log_content(log_dir="_log/"):
             
     except Exception as e:
         return f"读取日志失败: {str(e)}"   
-        # 日志上面
+        # 日志函数上面
 
 app = Flask(__name__)
 lock = threading.Lock()
@@ -244,6 +244,15 @@ def sign_api():
             # 3. 执行打卡脚本
             result = subprocess.run(["python", "index.py"], capture_output=True, text=True, cwd=".")
             output = result.stdout + result.stderr
+
+            # 🌟 新增调用：去 _log/ 文件夹下把详细的日志捞出来
+            # ==========================================
+            execution_log = get_latest_log_content("_log/")
+            
+            # 把控制台最直接的输出 和 文件里的详细日志 拼接在一起，方便你排查一切问题！
+            final_log = f"--- 控制台基础输出 ---\n{output}\n\n--- 底层执行详细日志 ---\n{execution_log}"  
+
+            # 调用日志函数上面
 
             # 4. 分析执行日志
             if "签到成功" in output or "成功" in output or "success" in output.lower():
