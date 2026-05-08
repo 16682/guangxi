@@ -396,9 +396,9 @@ class MainHandler:
             # 初始化静态配置项目
             defaultConfig = {
                 'remarkName': '默认备注名',
-                'model': 'OPPO R11 Plus',
-                'appVersion': '9.0.14',
-                'systemVersion': '4.4.4',
+                'model': 'Mi 13',
+                'appVersion': '9.9.11',
+                'systemVersion': '13',
                 'systemName': 'android',
                 "signVersion": "first_v3",
                 "calVersion": "firstv",
