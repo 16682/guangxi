@@ -93,7 +93,7 @@ jobs:
 
             
             # 🌟🌟🌟 新增这一行！把你报错日志里的真实 deviceId 锁死！🌟🌟🌟
-            user['deviceId'] = "B165F069-7E39-7B5B-2DA5-07B0EC4BFBF8"
+            user['deviceId'] = 'B165F069-7E39-7B5B-2DA5-07B0EC4BFBF8'
 
         # # 若缺失签到任务则补全
         # if not found_type_1:
