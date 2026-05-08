@@ -18,6 +18,10 @@ def sign_api():
     # 新增接收一个具体的地址参数，如果没有传，就降级使用 school 名称
     address = data.get('address', school)
     photo_url = data.get('photo', '')
+
+    # 提前获取 PHP 传过来的兜底坐标（不要做强制校验拦截，只是先拿出来备用）
+    req_lon = data.get('lon')
+    req_lat = data.get('lat')
     
     # # 🌟 直接接收前端传来的经纬度 (不再自己去查地图)
     # lon = data.get('lon')
@@ -30,13 +34,38 @@ def sign_api():
     if not all([username, password, school, address]):
         return jsonify({'code': 400, 'msg': '参数不全，请确保账号、密码、学校名称,地址已填写'})
 
+    lon, lat = None, None
+    
     # 🌟 核心修改：通过后端自动获取经纬度，完全抛弃/覆盖前端传来的 lon 和 lat
+    # try:
+    #     # 传入学校名称获取坐标 (返回的是元组: (lon, lat))
+    #     lon, lat = CpdailyTools.baiduGeocoding(address)
+    # except Exception as e:
+    #     # 如果学校名字填得太离谱，或者 API 抽风，拦截错误并返回给前端
+    #     return jsonify({'code': 500, 'msg': f'获取学校经纬度失败，请检查学校名称是否正确。错误信息：{str(e)}'})
+    # 🌟 核心修改：双保险获取坐标机制
     try:
-        # 传入学校名称获取坐标 (返回的是元组: (lon, lat))
+        # 第一优先级：尝试使用 Python 后端的 CpdailyTools 自己算坐标
         lon, lat = CpdailyTools.baiduGeocoding(address)
+        
+        # 防御性编程：如果没报错，但返回了空值，人为抛出异常去走兜底
+        if not lon or not lat:
+            raise ValueError("CpdailyTools 查到了空坐标")
+            
     except Exception as e:
-        # 如果学校名字填得太离谱，或者 API 抽风，拦截错误并返回给前端
-        return jsonify({'code': 500, 'msg': f'获取学校经纬度失败，请检查学校名称是否正确。错误信息：{str(e)}'})
+        # 拦截到网络请求错误（比如海外机器被墙、域名解析失败等）
+        print(f"CpdailyTools 获取坐标失败，准备使用 PHP 传来的兜底坐标。错误原因：{str(e)}")
+        
+        # 第二优先级：自动降级，使用 PHP 算好传过来的坐标
+        lon = req_lon
+        lat = req_lat
+
+    # 最终的安全校验：如果两边都拿不到坐标，才真正报错返回给前端
+    if not lon or not lat:
+        return jsonify({
+            'code': 500, 
+            'msg': '获取地址经纬度彻底失败（后端 API 与前置免 Key 算法双双失效），请联系管理员检查网络环境。'
+        })
 
     with lock:
         try:
