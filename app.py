@@ -8,6 +8,31 @@ from flask import Flask, request, jsonify
 import yaml
 # 🌟 新增导入 liteTools 中的 CpdailyTools 模块
 from liteTools import CpdailyTools
+import os
+import glob
+
+def get_latest_log_content(log_dir="_log/"):
+    """获取指定目录下最新生成的日志文件内容"""
+    try:
+        if not os.path.exists(log_dir):
+            return "日志目录不存在"
+            
+        # 获取目录下所有文件列表
+        files = glob.glob(os.path.join(log_dir, "*"))
+        if not files:
+            return "暂无日志文件"
+            
+        # 按文件最后修改时间排序，取最新的一个
+        latest_file = max(files, key=os.path.getmtime)
+        
+        # 读取内容（建议只读取最后 2000 字符，防止日志过大撑爆 JSON）
+        with open(latest_file, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            return content[-2000:] if len(content) > 2000 else content
+            
+    except Exception as e:
+        return f"读取日志失败: {str(e)}"   
+        # 日志上面
 
 app = Flask(__name__)
 lock = threading.Lock()
