@@ -211,16 +211,27 @@ class sleepCheck:
         self.form.update(CpdailyTools.handleCaptcha(
             self.host, self.session, self.userInfo['deviceId'], signType="attendance"))
 
+        # ======== 核心改造：构建与新版完全一致的设备指纹字典 ========
         extension = {
-            "lon": self.userInfo['lon'],
-            "lat": self.userInfo['lat'],
-            "model": self.userInfo['model'],
-            "appVersion": self.userInfo['appVersion'],
-            "systemVersion": self.userInfo['systemVersion'],
-            "userId": self.userInfo['username'],
-            "systemName": self.userInfo['systemName'],
-            "deviceId": self.userInfo['deviceId']
+            "systemName": "android",  # 强制小写
+            "systemVersion": str(self.userInfo.get('systemVersion', '13')), # 强制转字符串
+            "model": str(self.userInfo.get('model', 'Mi 13')),              # 强制转字符串
+            "deviceId": str(self.userInfo['deviceId']),
+            "appVersion": str(self.userInfo.get('appVersion', '9.9.11')),
+            "lon": str(self.userInfo['lon']), # 经度强制转为字符串，防止精度丢失
+            "lat": str(self.userInfo['lat']), # 纬度强制转为字符串，防止精度丢失
+            "userId": str(self.userInfo['username'])
         }
+        # extension = {
+        #     "lon": self.userInfo['lon'],
+        #     "lat": self.userInfo['lat'],
+        #     "model": self.userInfo['model'],
+        #     "appVersion": self.userInfo['appVersion'],
+        #     "systemVersion": self.userInfo['systemVersion'],
+        #     "userId": self.userInfo['username'],
+        #     "systemName": self.userInfo['systemName'],
+        #     "deviceId": self.userInfo['deviceId']
+        # }
 
         self.cpdailyExtension = CpdailyTools.encrypt_CpdailyExtension(
             json.dumps(extension))
@@ -229,18 +240,31 @@ class sleepCheck:
             json.dumps(self.form))
 
         self.submitData = {
-            "lon": self.userInfo['lon'],
-            "version": self.userInfo['signVersion'],
-            "calVersion": self.userInfo['calVersion'],
-            "deviceId": self.userInfo['deviceId'],
-            "userId": self.userInfo['username'],
-            "systemName": self.userInfo['systemName'],
+            "lon": str(self.userInfo['lon']), # 保持与 extension 里的类型一致
+            "version": self.userInfo.get('signVersion', 'first_v3'),
+            "calVersion": self.userInfo.get('calVersion', 'firstv'),
+            "deviceId": str(self.userInfo['deviceId']),
+            "userId": str(self.userInfo['username']),
+            "systemName": "android",
             "bodyString": self.bodyString,
-            "lat": self.userInfo['lat'],
-            "systemVersion": self.userInfo['systemVersion'],
-            "appVersion": self.userInfo['appVersion'],
-            "model": self.userInfo['model'],
+            "lat": str(self.userInfo['lat']), # 保持与 extension 里的类型一致
+            "systemVersion": str(self.userInfo.get('systemVersion', '13')),
+            "appVersion": str(self.userInfo.get('appVersion', '9.9.11')),
+            "model": str(self.userInfo.get('model', 'Mi 13')),
         }
+        # self.submitData = {
+        #     "lon": self.userInfo['lon'],
+        #     "version": self.userInfo['signVersion'],
+        #     "calVersion": self.userInfo['calVersion'],
+        #     "deviceId": self.userInfo['deviceId'],
+        #     "userId": self.userInfo['username'],
+        #     "systemName": self.userInfo['systemName'],
+        #     "bodyString": self.bodyString,
+        #     "lat": self.userInfo['lat'],
+        #     "systemVersion": self.userInfo['systemVersion'],
+        #     "appVersion": self.userInfo['appVersion'],
+        #     "model": self.userInfo['model'],
+        # }
 
         self.submitData['sign'] = CpdailyTools.signAbstract(self.submitData)
 
