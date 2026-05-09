@@ -100,7 +100,7 @@ users: #!!!!!别误删了这一行!!!!!
           title: 今天你所在的位置是?
           value: 其他
           extraValue: 天坛公园 #  如果存在选择题附带额外信息，请增加一个extraValue项
-    经纬度查询地址（请自行选择自己的学校地址，address，lon，lat都要填查询到的）：http://api.map.baidu.com/lbsapi/getpoint/index.html
+    # 经纬度查询地址（请自行选择自己的学校地址，address，lon，lat都要填查询到的）：http://api.map.baidu.com/lbsapi/getpoint/index.html
     lon: 108.39 # 经度(特别提醒!!!手机GPS是WGS-84坐标系，普通地图是GCJ02坐标系，今日校园用的是BD09坐标系。不要耍小聪明去其他地方获取坐标)
     lat: 30.80 # 纬度
     address: "重庆市万州区重庆市万州区沙龙路二段780号" # 地址信息
