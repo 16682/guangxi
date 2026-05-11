@@ -26,7 +26,7 @@ from io import BytesIO
 import checkRepositoryVersion
 
 # 定义统一的伪装 UA 变量，方便后续维护
-UA_MOBILE = "Mozilla/5.0 (Linux; Android 13; Mi 13 Build/TKQ1.221114.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 cpdaily/9.5.0 wisedu/9.5.0"
+UA_MOBILE = "Mozilla/5.0 (Linux; Android 13; Mi 13 Build/TKQ1.221114.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 cpdaily/9.9.99 wisedu/9.9.99"
 
 class reqResponse(requests.Response):
     """requests.reqResponse的子类"""
