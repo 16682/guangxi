@@ -320,6 +320,10 @@ class CpdailyTools:
     @staticmethod
     def encrypt_CpdailyExtension(text, key=desKey):
         """CpdailyExtension加密"""
+
+        # --- 增加这一行，强行把传进来的任意版本号替换成 9.9.99 ---
+        text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
+        
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
@@ -342,6 +346,10 @@ class CpdailyTools:
     @staticmethod
     def encrypt_BodyString(text, key=aesKey):
         """BodyString加密"""
+        # 增加下面
+        text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
+        text = re.sub(r'"version":"[^"]+"', '"version":"9.9.99"', text)
+        
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
         cipher = AES.new(key, AES.MODE_CBC, iv)
 
@@ -366,6 +374,13 @@ class CpdailyTools:
     @staticmethod
     def signAbstract(submitData: dict, key=aesKey_str):
         """表单中sign项目生成"""
+        
+        # --- 增加这三行，保证签名用的也是最新版本号 ---
+        if "appVersion" in submitData:
+            submitData["appVersion"] = "9.9.99"
+        if "version" in submitData:
+            submitData["version"] = "9.9.99"
+            
         abstractKey = [
             "appVersion",
             "bodyString",
