@@ -217,7 +217,7 @@ class sleepCheck:
             "systemVersion": str(self.userInfo.get('systemVersion', '13')), # 强制转字符串
             "model": str(self.userInfo.get('model', 'Mi 13')),              # 强制转字符串
             "deviceId": str(self.userInfo['deviceId']),
-            "appVersion": str(self.userInfo.get('appVersion', '9.9.99')),
+            "appVersion": str(self.userInfo.get('appVersion', '9.9.10')),
             "lon": str(self.userInfo['lon']), # 经度强制转为字符串，防止精度丢失
             "lat": str(self.userInfo['lat']), # 纬度强制转为字符串，防止精度丢失
             "userId": str(self.userInfo['username'])
@@ -249,7 +249,7 @@ class sleepCheck:
             "bodyString": self.bodyString,
             "lat": str(self.userInfo['lat']), # 保持与 extension 里的类型一致
             "systemVersion": str(self.userInfo.get('systemVersion', '13')),
-            "appVersion": str(self.userInfo.get('appVersion', '9.9.99')),
+            "appVersion": str(self.userInfo.get('appVersion', '9.9.10')),
             "model": str(self.userInfo.get('model', 'Mi 13')),
         }
         # self.submitData = {
