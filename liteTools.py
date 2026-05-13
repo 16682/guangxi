@@ -305,27 +305,30 @@ class LL:
         dir = os.path.join(dir, TT.formatStartTime("LOG#t=%Y-%m-%d--%H-%M-%S##.txt"))
         with open(dir, "w", encoding="utf-8") as f:
             f.write(log)
-
+            
 class CpdailyTools:
-    """今日校园相关函数 (已更新至最新版动态双密钥 DES 协议)"""
+    """今日校园相关函数 (真实版本号 + AES双拼密钥)"""
 
-    # === 最新解码的动态密钥 ===
-    desKey = "Yn9g6T5R"           # 对应本地缓存的 chk (用于加密 Cpdaily-Extension)
-    bodyKey = b"9hriwfra"         # 对应本地缓存的 fhk (用于加密 BodyString)
-    bodyKey_str = "9hriwfra"      # 用于 signAbstract 拼接签名
+    # 真正的最新版本号，坚决不用 9.9.99
+    REAL_VERSION = "9.9.10"
+    
+    # chk 解码出的 8 位 DES 密钥
+    desKey = "Yn9g6T5R"           
+    
+    # 将 fhk 的 8位 拼接成 16位 的 AES 密钥
+    bodyKey = b"9hriwfra9hriwfra"         
+    bodyKey_str = "9hriwfra9hriwfra"      
 
     @staticmethod
     def encrypt_CpdailyExtension(text, key=desKey):
         """CpdailyExtension加密"""
-        # 强制覆盖为高版本号
-        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', '"appVersion":"9.9.99"', text)
+        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', f'"appVersion":"{CpdailyTools.REAL_VERSION}"', text)
         
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
-        text = d.encrypt(text.encode('utf-8'))  # 加密
-        text = base64.b64encode(text)  # base64编码
-        text = text.decode()  # 解码
+        text = d.encrypt(text.encode('utf-8'))
+        text = base64.b64encode(text).decode()
         return text
 
     @staticmethod
@@ -334,44 +337,42 @@ class CpdailyTools:
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
-        text = base64.b64decode(text)  # Base64解码
-        text = d.decrypt(text)  # 解密
-        text = text.decode()  # 解码
+        text = base64.b64decode(text)
+        text = d.decrypt(text).decode()
         return text
 
     @staticmethod
     def encrypt_BodyString(text, key=bodyKey):
-        """BodyString加密 (由于新版密钥为8位，已从 AES 降级回 DES)"""
-        # 强制覆盖版本号，并将加密协议升级为 first_v4
-        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', '"appVersion":"9.9.99"', text)
+        """BodyString加密 (恢复为 AES，使用 16 位双拼密钥)"""
+        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', f'"appVersion":"{CpdailyTools.REAL_VERSION}"', text)
         text = re.sub(r'"version"\s*:\s*"[^"]+"', '"version":"first_v4"', text)
         
-        # 换用 DES 算法
-        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
-        d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
+        # 恢复 AES 的 16 位 IV
+        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
+        cipher = AES.new(key, AES.MODE_CBC, iv)
 
-        text = d.encrypt(text.encode('utf-8'))  # 加密
-        text = base64.b64encode(text).decode('utf-8')  # Base64编码并转回字符串
+        text = CT.pkcs7padding(text)
+        text = text.encode(CT.charset)
+        text = cipher.encrypt(text)
+        text = base64.b64encode(text).decode(CT.charset)
         return text
 
     @staticmethod
     def decrypt_BodyString(text, key=bodyKey):
-        """BodyString解密 (同步改为 DES)"""
-        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
-        d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
+        """BodyString解密"""
+        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
+        cipher = AES.new(key, AES.MODE_CBC, iv)
 
-        text = base64.b64decode(text)  # Base64解码
-        text = d.decrypt(text)  # 解密
-        text = text.decode('utf-8')  # 解码
+        text = base64.b64decode(text)
+        text = cipher.decrypt(text).decode(CT.charset)
+        text = CT.pkcs7unpadding(text)
         return text
 
     @staticmethod
     def signAbstract(submitData: dict, key=bodyKey_str):
         """表单中sign项目生成"""
-        
-        # 保证签名体里的版本号和协议版本严格一致
         if "appVersion" in submitData:
-            submitData["appVersion"] = "9.9.99"
+            submitData["appVersion"] = CpdailyTools.REAL_VERSION
         if "version" in submitData:
             submitData["version"] = "first_v4"
             
