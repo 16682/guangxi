@@ -306,35 +306,31 @@ class LL:
         with open(dir, "w", encoding="utf-8") as f:
             f.write(log)
 
-
 class CpdailyTools:
-    """今日校园相关函数"""
+    """今日校园相关函数 (已更新至最新版动态双密钥 DES 协议)"""
 
-    desKey = "b3L26XNL"
-
-        
-    # desKey = "B39312=="  //XCE927==
-    aesKey = b"SASEoK4Pa5d4SssO"
-    aesKey_str = "SASEoK4Pa5d4SssO"
+    # === 最新解码的动态密钥 ===
+    desKey = "Yn9g6T5R"           # 对应本地缓存的 chk (用于加密 Cpdaily-Extension)
+    bodyKey = b"9hriwfra"         # 对应本地缓存的 fhk (用于加密 BodyString)
+    bodyKey_str = "9hriwfra"      # 用于 signAbstract 拼接签名
 
     @staticmethod
     def encrypt_CpdailyExtension(text, key=desKey):
         """CpdailyExtension加密"""
-
-        # --- 增加这一行，强行把传进来的任意版本号替换成 9.9.99 ---
-        text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
+        # 强制覆盖为高版本号
+        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', '"appVersion":"9.9.99"', text)
         
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
-        text = d.encrypt(text)  # 加密
+        text = d.encrypt(text.encode('utf-8'))  # 加密
         text = base64.b64encode(text)  # base64编码
         text = text.decode()  # 解码
         return text
 
     @staticmethod
     def decrypt_CpdailyExtension(text, key=desKey):
-        """CpdailyExtension加密"""
+        """CpdailyExtension解密"""
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
@@ -344,42 +340,40 @@ class CpdailyTools:
         return text
 
     @staticmethod
-    def encrypt_BodyString(text, key=aesKey):
-        """BodyString加密"""
-        # 增加下面
-        text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
-        text = re.sub(r'"version":"[^"]+"', '"version":"9.9.99"', text)
+    def encrypt_BodyString(text, key=bodyKey):
+        """BodyString加密 (由于新版密钥为8位，已从 AES 降级回 DES)"""
+        # 强制覆盖版本号，并将加密协议升级为 first_v4
+        text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', '"appVersion":"9.9.99"', text)
+        text = re.sub(r'"version"\s*:\s*"[^"]+"', '"version":"first_v4"', text)
         
-        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+        # 换用 DES 算法
+        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
+        d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
-        text = CT.pkcs7padding(text)  # 填充
-        text = text.encode(CT.charset)  # 编码
-        text = cipher.encrypt(text)  # 加密
-        text = base64.b64encode(text).decode(CT.charset)  # Base64编码
+        text = d.encrypt(text.encode('utf-8'))  # 加密
+        text = base64.b64encode(text).decode('utf-8')  # Base64编码并转回字符串
         return text
 
     @staticmethod
-    def decrypt_BodyString(text, key=aesKey):
-        """BodyString解密"""
-        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
-        cipher = AES.new(key, AES.MODE_CBC, iv)
+    def decrypt_BodyString(text, key=bodyKey):
+        """BodyString解密 (同步改为 DES)"""
+        iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
+        d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
 
         text = base64.b64decode(text)  # Base64解码
-        text = cipher.decrypt(text)  # 解密
-        text = text.decode(CT.charset)  # 解码
-        text = CT.pkcs7unpadding(text)  # 删除填充
+        text = d.decrypt(text)  # 解密
+        text = text.decode('utf-8')  # 解码
         return text
 
     @staticmethod
-    def signAbstract(submitData: dict, key=aesKey_str):
+    def signAbstract(submitData: dict, key=bodyKey_str):
         """表单中sign项目生成"""
         
-        # --- 增加这三行，保证签名用的也是最新版本号 ---
+        # 保证签名体里的版本号和协议版本严格一致
         if "appVersion" in submitData:
             submitData["appVersion"] = "9.9.99"
         if "version" in submitData:
-            submitData["version"] = "9.9.99"
+            submitData["version"] = "first_v4"
             
         abstractKey = [
             "appVersion",
@@ -396,6 +390,95 @@ class CpdailyTools:
         abstract = parse.urlencode(abstractSubmitData) + "&" + key
         abstract_md5 = HSF.strHash(abstract, 5)
         return abstract_md5
+# class CpdailyTools:
+#     """今日校园相关函数"""
+
+#     desKey = "b3L26XNL"
+
+        
+#     # desKey = "B39312=="  //XCE927==
+#     aesKey = b"SASEoK4Pa5d4SssO"
+#     aesKey_str = "SASEoK4Pa5d4SssO"
+
+#     @staticmethod
+#     def encrypt_CpdailyExtension(text, key=desKey):
+#         """CpdailyExtension加密"""
+
+#         # --- 增加这一行，强行把传进来的任意版本号替换成 9.9.99 ---
+#         text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
+        
+#         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
+#         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
+
+#         text = d.encrypt(text)  # 加密
+#         text = base64.b64encode(text)  # base64编码
+#         text = text.decode()  # 解码
+#         return text
+
+#     @staticmethod
+#     def decrypt_CpdailyExtension(text, key=desKey):
+#         """CpdailyExtension加密"""
+#         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08"
+#         d = des(key, CBC, iv, pad=None, padmode=PAD_PKCS5)
+
+#         text = base64.b64decode(text)  # Base64解码
+#         text = d.decrypt(text)  # 解密
+#         text = text.decode()  # 解码
+#         return text
+
+#     @staticmethod
+#     def encrypt_BodyString(text, key=aesKey):
+#         """BodyString加密"""
+#         # 增加下面
+#         text = re.sub(r'"appVersion":"[^"]+"', '"appVersion":"9.9.99"', text)
+#         text = re.sub(r'"version":"[^"]+"', '"version":"9.9.99"', text)
+        
+#         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
+#         cipher = AES.new(key, AES.MODE_CBC, iv)
+
+#         text = CT.pkcs7padding(text)  # 填充
+#         text = text.encode(CT.charset)  # 编码
+#         text = cipher.encrypt(text)  # 加密
+#         text = base64.b64encode(text).decode(CT.charset)  # Base64编码
+#         return text
+
+#     @staticmethod
+#     def decrypt_BodyString(text, key=aesKey):
+#         """BodyString解密"""
+#         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
+#         cipher = AES.new(key, AES.MODE_CBC, iv)
+
+#         text = base64.b64decode(text)  # Base64解码
+#         text = cipher.decrypt(text)  # 解密
+#         text = text.decode(CT.charset)  # 解码
+#         text = CT.pkcs7unpadding(text)  # 删除填充
+#         return text
+
+#     @staticmethod
+#     def signAbstract(submitData: dict, key=aesKey_str):
+#         """表单中sign项目生成"""
+        
+#         # --- 增加这三行，保证签名用的也是最新版本号 ---
+#         if "appVersion" in submitData:
+#             submitData["appVersion"] = "9.9.99"
+#         if "version" in submitData:
+#             submitData["version"] = "9.9.99"
+            
+#         abstractKey = [
+#             "appVersion",
+#             "bodyString",
+#             "deviceId",
+#             "lat",
+#             "lon",
+#             "model",
+#             "systemName",
+#             "systemVersion",
+#             "userId",
+#         ]
+#         abstractSubmitData = {k: submitData[k] for k in abstractKey}
+#         abstract = parse.urlencode(abstractSubmitData) + "&" + key
+#         abstract_md5 = HSF.strHash(abstract, 5)
+#         return abstract_md5
 
     @staticmethod
     def baiduGeocoding(address: str):
