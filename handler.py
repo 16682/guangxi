@@ -397,7 +397,7 @@ class MainHandler:
             defaultConfig = {
                 'remarkName': '默认备注名',
                 'model': 'Mi 13',
-                'appVersion': '9.5.0',
+                'appVersion': '9.9.99',
                 'systemVersion': '13',
                 'systemName': 'android',
                 "signVersion": "first_v3",
