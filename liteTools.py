@@ -307,17 +307,19 @@ class LL:
             f.write(log)
             
 class CpdailyTools:
-    """今日校园相关函数 (真实版本号 + AES双拼密钥)"""
+    """今日校园相关函数 (使用最新版 16 位 AES 密钥)"""
 
-    # 真正的最新版本号，坚决不用 9.9.99
+    # --- 核心配置区 ---
+    # 必须使用真实最新版本号，绕过服务端拦截
     REAL_VERSION = "9.9.10"
     
-    # chk 解码出的 8 位 DES 密钥
-    desKey = "Yn9g6T5R"           
+    # desKey 依然用于加密 Cpdaily-Extension (通常固定不变)
+    desKey = "b3L26XNL"           
     
-    # 将 fhk 的 8位 拼接成 16位 的 AES 密钥
-    bodyKey = b"9hriwfra9hriwfra"         
-    bodyKey_str = "9hriwfra9hriwfra"      
+    # 【最新截获的 AES 密钥】用于加密 bodyString
+    # 备用密钥：如果报错，可尝试换成 b"fafUY9659kyengTR"
+    bodyKey = b"hru89rwr87Nthifa"         
+    bodyKey_str = "hru89rwr87Nthifa"      
 
     @staticmethod
     def encrypt_CpdailyExtension(text, key=desKey):
@@ -343,11 +345,11 @@ class CpdailyTools:
 
     @staticmethod
     def encrypt_BodyString(text, key=bodyKey):
-        """BodyString加密 (恢复为 AES，使用 16 位双拼密钥)"""
+        """BodyString加密 (恢复 AES，使用最新 16 位密钥)"""
         text = re.sub(r'"appVersion"\s*:\s*"[^"]+"', f'"appVersion":"{CpdailyTools.REAL_VERSION}"', text)
-        text = re.sub(r'"version"\s*:\s*"[^"]+"', '"version":"first_v4"', text)
+        text = re.sub(r'"version"\s*:\s*"[^"]+"', f'"version":"{CpdailyTools.REAL_VERSION}"', text)
         
-        # 恢复 AES 的 16 位 IV
+        # 16 位的 AES IV
         iv = b"\x01\x02\x03\x04\x05\x06\x07\x08\t\x01\x02\x03\x04\x05\x06\x07"
         cipher = AES.new(key, AES.MODE_CBC, iv)
 
@@ -371,10 +373,11 @@ class CpdailyTools:
     @staticmethod
     def signAbstract(submitData: dict, key=bodyKey_str):
         """表单中sign项目生成"""
+        # 同步更新签名体内的版本号
         if "appVersion" in submitData:
             submitData["appVersion"] = CpdailyTools.REAL_VERSION
         if "version" in submitData:
-            submitData["version"] = "first_v4"
+            submitData["version"] = CpdailyTools.REAL_VERSION
             
         abstractKey = [
             "appVersion",
