@@ -29,7 +29,7 @@ class TodayLoginService:
         self.password = userInfo["password"]
         self.schoolName = userInfo["schoolName"]
         self.session = reqSession()
-        headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 13; Mi 13 Build/TKQ1.221114.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 cpdaily/9.9.99 wisedu/9.9.99"}
+        headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 13; Mi 13 Build/TKQ1.221114.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 cpdaily/9.9.10 wisedu/9.9.10"}
         # headers = {"User-Agent": random.choice(Utils.getUserAgents())}
         # 关闭多余的连接
         self.session.keep_alive = False
