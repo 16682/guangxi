@@ -317,9 +317,9 @@ class CpdailyTools:
     desKey = "b3L26XNL"           
     
     # 【最新截获的 AES 密钥】用于加密 bodyString
-    # 备用密钥：如果报错，可尝试换成 b"fafUY9659kyengTR"
-    bodyKey = b"hru89rwr87Nthifa"         
-    bodyKey_str = "hru89rwr87Nthifa"      
+    # 备用密钥：如果报错，可尝试换成 b"fafUY9659xckyengTR"
+    bodyKey = b"hru89rwr87xcNthifa"         
+    bodyKey_str = "hru89rwr87xcNthifa"      
 
     @staticmethod
     def encrypt_CpdailyExtension(text, key=desKey):
